@@ -1,1 +1,202 @@
+blueprint:
+  name: zigbee2mqtt - EnOcean PTM 215Z On-Off-Dimming MQTT
+  description: Control lights with MQTT actions including on, off, and brightness adjustments for top and bottom lights.
+  domain: automation
+  input:
+    mqtt_device:
+      name: MQTT Device
+      description: "Select the MQTT device for triggers."
+      selector:
+        device:
+          integration: mqtt
 
+    light_top:
+      name: Top Light
+      description: The light controlled by the top actions.
+      selector:
+        entity:
+          domain: light
+
+    light_bottom:
+      name: Bottom Light
+      description: The light controlled by the bottom actions.
+      selector:
+        entity:
+          domain: light
+
+    dimming_boolean:
+      name: Dimming Occurred Boolean
+      description: "Select the input_boolean for tracking dimming."
+      selector:
+        entity:
+          domain: input_boolean
+
+trigger:
+  - platform: device
+    device_id: !input mqtt_device
+    domain: mqtt
+    type: action
+    subtype: press_1
+    id: press_1
+  - platform: device
+    device_id: !input mqtt_device
+    domain: mqtt
+    type: action
+    subtype: release_1
+    id: release_1
+  - platform: device
+    device_id: !input mqtt_device
+    domain: mqtt
+    type: action
+    subtype: press_3
+    id: press_3
+  - platform: device
+    device_id: !input mqtt_device
+    domain: mqtt
+    type: action
+    subtype: release_3
+    id: release_3
+  - platform: device
+    device_id: !input mqtt_device
+    domain: mqtt
+    type: action
+    subtype: press_2
+    id: press_2
+  - platform: device
+    device_id: !input mqtt_device
+    domain: mqtt
+    type: action
+    subtype: release_2
+    id: release_2
+  - platform: device
+    device_id: !input mqtt_device
+    domain: mqtt
+    type: action
+    subtype: press_4
+    id: press_4
+  - platform: device
+    device_id: !input mqtt_device
+    domain: mqtt
+    type: action
+    subtype: release_4
+    id: release_4
+
+condition: []
+
+action:
+  - choose:
+      - conditions:
+          - condition: trigger
+            id: press_1
+        sequence:
+          - service: light.turn_on
+            target:
+              entity_id: !input light_top
+          - delay:
+              seconds: 0.5
+          - repeat:
+              count: 7
+              sequence:
+                - service: light.turn_on
+                  data:
+                    brightness_step_pct: 15
+                    transition: 0
+                  target:
+                    entity_id: !input light_top
+                - delay:
+                    seconds: 0.5
+      - conditions:
+          - condition: trigger
+            id: press_3
+        sequence:
+          - delay:
+              seconds: 0.5
+          - service: input_boolean.turn_on
+            target:
+              entity_id: !input dimming_boolean
+          - repeat:
+              count: 7
+              sequence:
+                - service: light.turn_on
+                  data:
+                    brightness_step_pct: -15
+                    transition: 0
+                  target:
+                    entity_id: !input light_top
+                - delay:
+                    seconds: 0.5
+      - conditions:
+          - condition: trigger
+            id: release_3
+        sequence:
+          - if:
+              - condition: state
+                entity_id: !input dimming_boolean
+                state: "off"
+            then:
+              - service: light.turn_off
+                target:
+                  entity_id: !input light_top
+            else:
+              - service: input_boolean.turn_off
+                target:
+                  entity_id: !input dimming_boolean
+
+      - conditions:
+          - condition: trigger
+            id: press_2
+        sequence:
+          - service: light.turn_on
+            target:
+              entity_id: !input light_bottom
+          - delay:
+              seconds: 0.5
+          - repeat:
+              count: 7
+              sequence:
+                - service: light.turn_on
+                  data:
+                    brightness_step_pct: 15
+                    transition: 0
+                  target:
+                    entity_id: !input light_bottom
+                - delay:
+                    seconds: 0.5
+      - conditions:
+          - condition: trigger
+            id: press_4
+        sequence:
+          - delay:
+              seconds: 0.5
+          - service: input_boolean.turn_on
+            target:
+              entity_id: !input dimming_boolean
+          - repeat:
+              count: 7
+              sequence:
+                - service: light.turn_on
+                  data:
+                    brightness_step_pct: -15
+                    transition: 0
+                  target:
+                    entity_id: !input light_bottom
+                - delay:
+                    seconds: 0.5
+      - conditions:
+          - condition: trigger
+            id: release_4
+        sequence:
+          - if:
+              - condition: state
+                entity_id: !input dimming_boolean
+                state: "off"
+            then:
+              - service: light.turn_off
+                target:
+                  entity_id: !input light_bottom
+            else:
+              - service: input_boolean.turn_off
+                target:
+                  entity_id: !input dimming_boolean
+
+mode: restart
