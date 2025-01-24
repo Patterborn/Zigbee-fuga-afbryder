@@ -1,0 +1,142 @@
+blueprint:
+  name: zigbee2mqtt - EnOcean PTM 215Z On-Off-Dimming MQTT
+  description: Opsætning af kontakt til at styre lys.
+  domain: automation
+  input:
+    mqtt_device:
+      name: Kontakt
+      description: "Vælg hvilken kontakt der skal bruges"
+      selector:
+        device:
+          integration: mqtt
+    top_section:
+      name: De øverste to knapper
+      icon: mdi:cog
+      input:
+        top_light:
+          name: Top bjælke lys
+          description: Hvilken lys skal top bjælken styre.
+          selector:
+            entity:
+              domain: light
+        top_toggle:
+          name: Tænd/sluk
+          description: Skal øverste bjælke tænde/slukke lyset
+          selector:
+            boolean:
+        top_dim:
+          name: Blænd op/ned
+          description: Skal øverste bjælke styre lysstyrken
+          selector:
+            boolean:
+    bottom_section:
+      name: De nederste knapper
+      icon: mdi:cog
+      input:
+        bottom_light:
+          name: Bund bjælke lys
+          description: Hvilken lys skal bund bjælken styre. Kan være det samme som top.
+          selector:
+            entity:
+              domain: light
+        bottom_toggle:
+          name: Tænd/sluk
+          description: Skal nederste bjælke tænde/slukke lyset
+          selector:
+            boolean:
+        bottom_dim:
+          name: Blænd op/ned
+          description: Skal nederste bjælke styre lysstyrken
+          selector:
+            boolean:
+mode: single
+max_exceeded: silent
+variables:
+  hold_delay: 500
+  bright_step: 100
+  transition_time: 2
+  id_device: !input mqtt_device
+  mqttname: "{{ device_attr(id_device, 'name')}}"
+trigger:
+  - platform: mqtt
+    topic: "{{ 'zigbee2mqtt/' ~ mqttname }}"
+
+action:
+  - variables:
+      controller: mqttname
+  - choose:
+      - conditions: '{{ "press_" | string in trigger.payload_json.action }}'
+        sequence:
+          - wait_for_trigger:
+              - platform: mqtt
+                topic: "{{ base_topic ~ '/' ~ controller ~ '/action' }}"
+                payload: release_1
+              - platform: mqtt
+                topic: "{{ base_topic ~ '/' ~ controller ~ '/action' }}"
+                payload: release_2
+              - platform: mqtt
+                topic: "{{ base_topic ~ '/' ~ controller ~ '/action' }}"
+                payload: release_3
+              - platform: mqtt
+                topic: "{{ base_topic ~ '/' ~ controller ~ '/action' }}"
+                payload: release_4
+              - platform: mqtt
+                topic: "{{ base_topic ~ '/' ~ controller ~ '/action' }}"
+                payload: release_1_and_3
+              - platform: mqtt
+                topic: "{{ base_topic ~ '/' ~ controller ~ '/action' }}"
+                payload: release_2_and_4
+            timeout:
+              milliseconds: hold_delay
+          - choose:
+              - conditions:
+                  '{{ trigger.payload_json.action == "press_1" and wait.trigger.payload == "release_1" }}'
+                sequence: !input "button_1_pressed"
+              - conditions:
+                  '{{ trigger.payload_json.action == "press_2" and wait.trigger.payload == "release_2" }}'
+                sequence: !input "button_2_pressed"
+              - conditions:
+                  '{{ trigger.payload_json.action == "press_3" and wait.trigger.payload == "release_3" }}'
+                sequence: !input "button_3_pressed"
+              - conditions:
+                  '{{ trigger.payload_json.action == "press_4" and wait.trigger.payload == "release_4" }}'
+                sequence: !input "button_4_pressed"
+              - conditions:
+                  '{{ trigger.payload_json.action == "press_1_and_3" and wait.trigger.payload == "release_1_and_3" }}'
+                sequence: !input "button_1_and_3_pressed"
+              - conditions:
+                  '{{ trigger.payload_json.action == "press_2_and_4" and wait.trigger.payload == "release_2_and_4" }}'
+                sequence: !input "button_2_and_4_pressed"
+              - conditions:
+                  '{{ trigger.payload_json.action == "press_1" and wait.trigger == None }}'
+                sequence: !input "button_1_held"
+              - conditions:
+                  '{{ trigger.payload_json.action == "press_2" and wait.trigger == None }}'
+                sequence: !input "button_2_held"
+              - conditions:
+                  '{{ trigger.payload_json.action == "press_3" and wait.trigger == None }}'
+                sequence: !input "button_3_held"
+              - conditions:
+                  '{{ trigger.payload_json.action == "press_4" and wait.trigger == None }}'
+                sequence: !input "button_4_held"
+              - conditions:
+                  '{{ trigger.payload_json.action == "press_1_and_3" and wait.trigger == None }}'
+                sequence: !input "button_1_and_3_held"
+              - conditions:
+                  '{{ trigger.payload_json.action == "press_2_and_4" and wait.trigger == None }}'
+                sequence: !input "button_2_and_4_held"
+      - conditions: '{{ "release_" | string in trigger.payload_json.action }}'
+        sequence:
+          - choose:
+              - conditions: '{{ trigger.payload_json.action == "release_1" }}'
+                sequence: !input "button_1_released"
+              - conditions: '{{ trigger.payload_json.action == "release_2" }}'
+                sequence: !input "button_2_released"
+              - conditions: '{{ trigger.payload_json.action == "release_3" }}'
+                sequence: !input "button_3_released"
+              - conditions: '{{ trigger.payload_json.action == "release_4" }}'
+                sequence: !input "button_4_released"
+              - conditions: '{{ trigger.payload_json.action == "release_1_and_3" }}'
+                sequence: !input "button_1_and_3_released"
+              - conditions: '{{ trigger.payload_json.action == "release_2_and_4" }}'
+                sequence: !input "button_2_and_4_released"
